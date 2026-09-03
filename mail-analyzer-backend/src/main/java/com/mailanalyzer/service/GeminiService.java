@@ -7,143 +7,144 @@ import com.mailanalyzer.util.GeminiResponseParser;
 import com.mailanalyzer.util.GmailMessageDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.google.genai.GoogleGenAiChatModel;
-import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
-import org.springframework.ai.google.genai.api.GoogleGenAiApi;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Service that communicates with the Gemini API via Spring AI.
- *
- * <h3>Per-User API Key Design</h3>
- * Spring AI's auto-configuration is excluded (no global Gemini key).
- * Instead, each call to {@link #analyzeEmails} builds a fresh
- * {@link ChatClient} using the user's own decrypted Gemini API key.
- * This means:
- * <ul>
- *   <li>Users pay for their own Gemini usage.</li>
- *   <li>One user's quota exhaustion does not affect others.</li>
- *   <li>No API key is shared across users.</li>
- * </ul>
- *
- * <h3>Batch Processing</h3>
- * All new emails (regardless of the connected account count) are sent in
- * a SINGLE Gemini request.  The batch prompt asks Gemini to return a JSON
- * array, one object per email.  This is the core efficiency guarantee:
- * <ul>
- *   <li>100 new emails → 1 Gemini request</li>
- *   <li>0 new emails   → 0 Gemini requests</li>
- * </ul>
- *
- * <h3>Response Flow</h3>
- * Raw Gemini output → {@link GeminiResponseParser} validates structure,
- * categories, priorities → returns {@link AnalyzedEmailDto} list ready
- * for persistence.
- *
- * <p><b>Class-name note:</b> This service uses {@code GoogleGenAiChatModel},
- * {@code GoogleGenAiChatOptions}, and {@code GoogleGenAiApi} from the
- * {@code spring-ai-starter-model-google-genai} dependency (Spring AI 1.0.0).
- * If your build uses a different Spring AI version, verify these class names
- * in the {@code org.springframework.ai.google.genai} package.
+ * Service that communicates with the Gemini REST API directly.
+ * Per-user API key design: each call uses the user's own decrypted key.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class GeminiService {
 
-    private static final String GEMINI_MODEL = "gemini-1.5-flash";
-    private static final double TEMPERATURE  = 0.0;  // deterministic output for JSON
+    private static final String GEMINI_API_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
 
     private final GeminiResponseParser responseParser;
     private final ObjectMapper objectMapper;
-
-    // ── Public API ───────────────────────────────────────────────────────
+    private final RestTemplate restTemplate;
 
     /**
-     * Analyzes a batch of emails using the provided Gemini API key.
-     *
-     * <p>Builds one prompt containing all emails as a JSON array, sends it
-     * to Gemini via Spring AI's {@code ChatClient}, then delegates parsing
-     * and validation to {@link GeminiResponseParser}.
-     *
-     * @param decryptedApiKey the user's Gemini API key (already decrypted, NOT stored)
-     * @param emails          list of new emails to analyze (must be non-empty)
-     * @return list of validated {@link AnalyzedEmailDto} objects
-     * @throws GeminiException if Gemini fails or returns an invalid response
+     * Analyzes a batch of emails using the user's Gemini API key.
+     * Sends one REST request to Gemini containing all emails.
      */
     public List<AnalyzedEmailDto> analyzeEmails(String decryptedApiKey, List<GmailMessageDto> emails) {
         if (emails.isEmpty()) {
             throw new IllegalArgumentException("Cannot call Gemini with an empty email list");
         }
 
-        log.info("Sending {} emails to Gemini (model={})", emails.size(), GEMINI_MODEL);
+        log.info("Sending {} emails to Gemini (gemini-1.5-flash)", emails.size());
 
-        ChatClient client = buildChatClient(decryptedApiKey);
         String prompt = buildBatchPrompt(emails);
-
-        String rawResponse;
-        try {
-            rawResponse = client.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
-        } catch (Exception e) {
-            log.error("Gemini API call failed: {}", e.getMessage());
-            throw new GeminiException("Gemini API request failed: " + e.getMessage());
-        }
+        String rawResponse = callGeminiApi(decryptedApiKey, prompt);
 
         if (rawResponse == null || rawResponse.isBlank()) {
             throw new GeminiException("Gemini returned an empty response");
         }
 
-        log.debug("Gemini raw response length: {} chars", rawResponse.length());
-
-        // Validate and parse the response
-        List<String> sentIds = emails.stream().map(GmailMessageDto::getGmailMessageId).toList();
+        List<String> sentIds = emails.stream()
+                .map(GmailMessageDto::getGmailMessageId)
+                .toList();
         return responseParser.parseAndValidate(rawResponse, sentIds);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────
 
     /**
-     * Programmatically constructs a {@link ChatClient} with the user's own API key.
+     * Calls the Gemini generateContent REST endpoint.
      *
-     * <p>This bypasses Spring AI's auto-configured global ChatClient bean and
-     * creates a dedicated client instance for this specific API request.
+     * @param apiKey  user's raw Gemini API key
+     * @param prompt  the full analysis prompt text
+     * @return the text content of Gemini's first response candidate
      */
-    private ChatClient buildChatClient(String apiKey) {
-        GoogleGenAiApi genAiApi = new GoogleGenAiApi(apiKey);
+    @SuppressWarnings("unchecked")
+    private String callGeminiApi(String apiKey, String prompt) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        GoogleGenAiChatOptions options = GoogleGenAiChatOptions.builder()
-                .model(GEMINI_MODEL)
-                .temperature(TEMPERATURE)
-                .build();
+        // Gemini REST API request body
+        Map<String, Object> requestBody = Map.of(
+            "contents", List.of(Map.of(
+                "parts", List.of(Map.of("text", prompt))
+            )),
+            "generationConfig", Map.of(
+                "temperature", 0.0,
+                "responseMimeType", "application/json"
+            )
+        );
 
-        GoogleGenAiChatModel chatModel = new GoogleGenAiChatModel(genAiApi, options);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        String url = GEMINI_API_URL + apiKey;
 
-        return ChatClient.builder(chatModel).build();
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new GeminiException("Gemini API returned non-2xx status: " + response.getStatusCode());
+            }
+
+            // Navigate: body → candidates[0] → content → parts[0] → text
+            Map<String, Object> body = response.getBody();
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) body.get("candidates");
+
+            if (candidates == null || candidates.isEmpty()) {
+                throw new GeminiException("Gemini response contained no candidates");
+            }
+
+            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+
+            if (parts == null || parts.isEmpty()) {
+                throw new GeminiException("Gemini response candidate had no parts");
+            }
+
+            return (String) parts.get(0).get("text");
+
+        } catch (GeminiException e) {
+            throw e;
+        } catch (HttpClientErrorException e) {
+            log.error("Gemini API HTTP error {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            if (e.getStatusCode().value() == 400) {
+                throw new GeminiException("Invalid Gemini API key or request. Please check your API key in Settings.");
+            }
+            if (e.getStatusCode().value() == 429) {
+                throw new GeminiException("Gemini API quota exceeded. Please try again later.");
+            }
+            throw new GeminiException("Gemini API error: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected Gemini API call failure: {}", e.getMessage());
+            throw new GeminiException("Gemini API request failed: " + e.getMessage());
+        }
     }
 
     /**
-     * Builds the batch analysis prompt.
+     * Builds the batch analysis prompt containing all emails as JSON.
      *
-     * <p>The prompt instructs Gemini to return ONLY a JSON array (no markdown,
-     * no explanation) with one object per email, matching the exact categories
-     * and priority scale defined in the system specification.
+     * <p>Instructs Gemini to return ONLY a JSON array — no markdown, no
+     * explanation — with one object per email.
      */
     private String buildBatchPrompt(List<GmailMessageDto> emails) {
         String emailsJson;
         try {
-            List<Object> emailArray = emails.stream().map(e -> new java.util.LinkedHashMap<String, Object>() {{
-                put("id", e.getGmailMessageId());
-                put("from", e.getSender());
-                put("subject", e.getSubject());
-                put("body", truncateBody(e.getBody()));
-            }}).collect(Collectors.toList());
+            List<Object> emailArray = emails.stream().map(e -> {
+                java.util.LinkedHashMap<String, Object> map = new java.util.LinkedHashMap<>();
+                map.put("id", e.getGmailMessageId());
+                map.put("from", e.getSender());
+                map.put("subject", e.getSubject());
+                map.put("body", truncateBody(e.getBody()));
+                return (Object) map;
+            }).collect(Collectors.toList());
             emailsJson = objectMapper.writeValueAsString(emailArray);
         } catch (Exception ex) {
             throw new GeminiException("Failed to serialize emails for Gemini prompt: " + ex.getMessage());
@@ -156,9 +157,9 @@ public class GeminiService {
             1. Return ONLY a valid JSON array. No markdown, no code blocks, no explanation.
             2. Each element must have exactly these fields:
                - "gmail_message_id": the exact same "id" value from the input
-               - "summary": 1-2 sentence plain-text summary of the email's key information
+               - "summary": 1-2 sentence plain-text summary of the email key information
                - "category": exactly one of the categories listed below
-               - "priority": integer 1-5 matching the category's priority group
+               - "priority": integer 1-5 matching the category priority group
             
             CATEGORIES AND PRIORITY:
             Priority 1: CAREER_OPPORTUNITIES, APPLICATION_UPDATES, INTERVIEW_INVITATIONS, CODING_ASSESSMENTS, BANKING_AND_PAYMENTS, SECURITY_ALERTS, COLLEGE_AND_ACADEMICS
@@ -184,10 +185,7 @@ public class GeminiService {
             """ + emailsJson;
     }
 
-    /**
-     * Truncates email body to avoid hitting Gemini's context limit.
-     * 1500 chars is enough for meaningful analysis without burning tokens.
-     */
+    /** Truncates body to avoid hitting Gemini token limits. */
     private String truncateBody(String body) {
         if (body == null) return "";
         return body.length() > 1500 ? body.substring(0, 1500) + "..." : body;
