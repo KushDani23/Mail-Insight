@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: mail-analyzer-backend
+    runtime: java
+    buildCommand: cd mail-analyzer-backend && ./mvnw clean package -DskipTests
+    startCommand: java -jar mail-analyzer-backend/target/mail-analyzer-backend-0.0.1-SNAPSHOT.jar
+    plan: free
+    healthCheckPath: /api/auth/me
+    envVars:
+      # ── Database (Neon PostgreSQL) ─────────────────────────────────────
+      - key: SPRING_DATASOURCE_URL
+        sync: false   # Set manually in Render dashboard
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+      # ── Google OAuth2 ──────────────────────────────────────────────────
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # ── Encryption ─────────────────────────────────────────────────────
+      # Generate: openssl rand -base64 32
+      - key: ENCRYPTION_SECRET
+        sync: false
+
+      # ── CORS ───────────────────────────────────────────────────────────
+      # Set to your Vercel frontend URL, e.g. https://mail-analyzer.vercel.app
+      - key: FRONTEND_ORIGIN
+        sync: false
+
+      # ── JVM tuning for Render free tier ───────────────────────────────
+      - key: JAVA_OPTS
+        value: -Xmx400m -Xss512k -XX:+UseSerialGC

@@ -228,7 +228,7 @@ public class GmailService {
         do {
             ListHistoryResponse historyResponse = gmail.users().history()
                     .list(USER_ID)
-                    .setStartHistoryId(Long.parseLong(startHistoryId))
+                    .setStartHistoryId(new java.math.BigInteger(startHistoryId))
                     .setHistoryTypes(List.of("messageAdded"))
                     .setPageToken(pageToken)
                     .execute();
@@ -398,7 +398,6 @@ public class GmailService {
      * Returns a valid (non-expired) access token.
      * If the stored token is expired, uses the refresh token to obtain a new one.
      */
-    @Transactional
     private String getValidAccessToken(ConnectedAccount account) {
         if (!account.isAccessTokenExpired()) {
             return encryptionUtil.decrypt(account.getAccessToken());
@@ -422,7 +421,6 @@ public class GmailService {
      * Calls Google's token endpoint to exchange a refresh token for a new access token.
      * Updates the {@link ConnectedAccount} with the new token and expiry.
      */
-    @Transactional
     private String refreshAccessToken(ConnectedAccount account, String refreshToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
