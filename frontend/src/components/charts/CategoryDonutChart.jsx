@@ -3,14 +3,30 @@ import {
 } from 'recharts';
 
 const PALETTE = {
-  WORK:       '#9B7FFF',
-  PERSONAL:   '#4FC3F7',
-  FINANCE:    '#4ADE80',
-  PROMOTIONS: '#FACC15',
-  SOCIAL:     '#F7C84F',
-  SPAM:       '#FF5C7A',
-  UPDATES:    '#818CF8',
-  OTHER:      '#94A3B8',
+  CAREER_OPPORTUNITIES:  '#9B7FFF',
+  APPLICATION_UPDATES:   '#4FC3F7',
+  INTERVIEW_INVITATIONS: '#4ADE80',
+  CODING_ASSESSMENTS:    '#FACC15',
+  BANKING_AND_PAYMENTS:  '#4ADE80',
+  SECURITY_ALERTS:       '#FF5C7A',
+  COLLEGE_AND_ACADEMICS: '#9B7FFF',
+  LEARNING_PLATFORMS:    '#4FC3F7',
+  CERTIFICATIONS:        '#F7C84F',
+  CODING_PLATFORMS:      '#818CF8',
+  HACKATHONS:            '#FACC15',
+  OPEN_SOURCE:           '#4ADE80',
+  BLOGS:                 '#94A3B8',
+  NEWSLETTERS:           '#94A3B8',
+  NEWS_FEEDS:            '#94A3B8',
+  VIDEO_NOTIFICATIONS:   '#FF5C7A',
+  WEEKLY_DIGESTS:        '#94A3B8',
+  COMMUNITY_UPDATES:     '#4FC3F7',
+  PROMOTIONS:            '#FACC15',
+  MARKETING:             '#FACC15',
+  SPAM:                  '#FF5C7A',
+  GENERAL_UNIVERSITY:    '#9B7FFF',
+  COMMUNITY_ACTIVITIES:  '#F7C84F',
+  EVENT_INVITATIONS:     '#818CF8',
 };
 
 const CustomTooltip = ({ active, payload }) => {
@@ -89,7 +105,7 @@ export default function CategoryDonutChart({ countByCategory }) {
           iconSize={8}
           formatter={(value) =>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-              {value.charAt(0) + value.slice(1).toLowerCase()}
+              {value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
             </span>
           }
         />

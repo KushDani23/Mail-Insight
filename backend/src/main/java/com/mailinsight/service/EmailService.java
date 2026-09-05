@@ -63,16 +63,27 @@ public class EmailService {
             throw new InsufficientEmailsException(newEmails.size(), MINIMUM_EMAILS_REQUIRED);
         }
 
-        log.info("Fetched {} new emails for user={}, sending to Gemini...", newEmails.size(), user.getId());
+        log.info("Fetched {} new emails for user={}, processing in batches of 20...", newEmails.size(), user.getId());
 
         // Step 3: Get user's Gemini API key (decrypted, in memory only)
         String apiKey = aiKeyService.getDecryptedKey(user);
 
-        // Step 4: Single batch Gemini request (N emails → 1 request)
-        List<AnalyzedEmailDto> analyzed = geminiService.analyzeEmails(apiKey, newEmails);
+        // Step 4: Split into batches of 20 and call Gemini for each batch
+        final int BATCH_SIZE = 20;
+        List<AnalyzedEmailDto> allAnalyzed = new ArrayList<>();
+        int totalBatches = (int) Math.ceil((double) newEmails.size() / BATCH_SIZE);
+
+        for (int i = 0; i < newEmails.size(); i += BATCH_SIZE) {
+            List<GmailMessageDto> batch = newEmails.subList(i, Math.min(i + BATCH_SIZE, newEmails.size()));
+            int batchNum = (i / BATCH_SIZE) + 1;
+            log.info("Sending batch {}/{} ({} emails) to Gemini for user={}",
+                    batchNum, totalBatches, batch.size(), user.getId());
+            List<AnalyzedEmailDto> batchResult = geminiService.analyzeEmails(apiKey, batch);
+            allAnalyzed.addAll(batchResult);
+        }
 
         // Step 5: Persist validated results (metadata + summary only, no body)
-        int saved = persistAnalyzedEmails(user, newEmails, analyzed);
+        int saved = persistAnalyzedEmails(user, newEmails, allAnalyzed);
         int skipped = newEmails.size() - saved;
 
         // Step 6: Update Gmail History IDs for next incremental sync

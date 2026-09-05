@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GeminiService {
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=";
     private final GeminiResponseParser responseParser;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -34,7 +34,7 @@ public class GeminiService {
             throw new IllegalArgumentException("Cannot call Gemini with an empty email list");
         }
 
-        log.info("Sending {} emails to Gemini (gemini-1.5-flash)", emails.size());
+        log.info("Sending {} emails to Gemini (gemini-3.6-flash)", emails.size());
 
         String prompt = buildBatchPrompt(emails);
         String rawResponse = callGeminiApi(decryptedApiKey, prompt);
