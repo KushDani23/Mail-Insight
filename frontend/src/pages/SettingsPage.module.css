@@ -1,0 +1,151 @@
+.wrapper {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.4s ease;
+  max-width: 720px;
+}
+
+.section {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sectionIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  margin-bottom: 4px;
+}
+
+.sectionDesc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.sectionDesc a {
+  color: var(--color-primary-light);
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keyStatus {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+}
+
+.keyStatusActive {
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.25);
+  color: var(--color-success);
+}
+
+.keyStatusMissing {
+  background: rgba(250,204,21,0.08);
+  border: 1px solid rgba(250,204,21,0.22);
+  color: var(--color-warning);
+}
+
+/* ── Accounts ─────────────────────────────────────── */
+.emptyAccounts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(255,255,255,0.02);
+  border: var(--border-glass);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.emptyAccounts p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.accountsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accountRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: var(--border-glass);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.accountRow:hover { background: rgba(255,255,255,0.05); }
+
+.accountAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.accountInfo { flex: 1; min-width: 0; }
+
+.accountEmail {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disconnectBtn {
+  color: var(--color-danger) !important;
+  border-color: rgba(255,92,122,0.2) !important;
+  flex-shrink: 0;
+}
+
+.disconnectBtn:hover {
+  background: rgba(255,92,122,0.1) !important;
+}

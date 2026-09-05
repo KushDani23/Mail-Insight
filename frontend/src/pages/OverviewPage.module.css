@@ -1,0 +1,152 @@
+.wrapper {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.4s ease;
+}
+
+/* ── Stat Grid ────────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  transition: transform var(--transition-base);
+}
+
+.statCard:hover { transform: translateY(-2px); }
+
+.statIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.statLabel {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+/* ── Breakdown card ───────────────────────────────── */
+.breakdownCard {
+  padding: 24px;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  margin-bottom: 20px;
+}
+
+.categories { display: flex; flex-direction: column; gap: 14px; }
+
+.catRow { display: flex; flex-direction: column; gap: 6px; }
+
+.catMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.catName {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.catCount {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.catPct {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 38px;
+  text-align: right;
+}
+
+.catTrack {
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.catFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s var(--transition-spring);
+  opacity: 0.85;
+}
+
+/* ── New emails card ──────────────────────────────── */
+.newEmailsCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border-color: rgba(79,195,247,0.15);
+}
+
+.newEmailsIcon { font-size: 1.8rem; flex-shrink: 0; margin-top: 2px; }
+
+.newEmailsCount {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.newEmailsHint { font-size: 0.82rem; color: var(--text-muted); }
+
+.miniProgress {
+  height: 4px;
+  background: rgba(79,195,247,0.1);
+  border-radius: var(--radius-full);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.miniFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4FC3F7, #7C5CFC);
+  border-radius: var(--radius-full);
+  transition: width 0.8s var(--transition-spring);
+}
