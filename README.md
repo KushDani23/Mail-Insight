@@ -1,6 +1,6 @@
-# MailInsight — AI-Powered Email Intelligence
+# MailInsight — Gmail Inbox Analyzer with Priority-Based Categorization
 
-> Analyze your Gmail inbox with Google Gemini AI. Get smart categorization, priority detection, and plain-English summaries — all in one dashboard.
+MailInsight is a full-stack application that connects to a user's Gmail account(s) via OAuth2, analyzes unread/unprocessed emails using the Gemini API, and organizes them into a priority-based dashboard. The goal is to cut through inbox noise by automatically surfacing what actually needs attention (interview invites, security alerts, payment notices) and pushing everything else (newsletters, promotions, social updates) further down.
 
 ---
 
@@ -8,9 +8,12 @@
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
-- [User Flow](#user-flow)
-- [Backend Architecture](#backend-architecture)
+- [System Flow](#system-flow)
+- [Core Backend Subsystems](#core-backend-subsystems)
+- [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
+- [Security](#security)
+- [Scope and Limitations](#scope-and-limitations)
 - [Running Locally](#running-locally)
 - [Environment Variables](#environment-variables)
 
@@ -18,115 +21,92 @@
 
 ## Overview
 
-MailInsight connects to your Gmail account via OAuth2, fetches your emails, and runs them through the **Google Gemini AI** to produce:
+A user signs in with Google, links one or more Gmail accounts, and provides their own Gemini API key. When they trigger an analysis, the backend fetches unprocessed emails, batches them into a single structured request (20 emails) per batch, and asks Gemini to classify each email into a category and priority tier with a short summary. Results are validated and persisted; the frontend renders them as charts and a searchable, filterable table.
 
-- **Categorization** — Work, Personal, Finance, Promotions, Social, Updates, Spam, Other
-- **Priority Detection** — High, Medium, Low
-- **AI Summaries** — A short plain-English summary of what each email is about
-
-All of this is displayed in an interactive dashboard with charts, a searchable email table, and per-email detail views.
+The project is a modular monolith — a single Spring Boot backend with clearly separated layers (controller, service, repository), rather than microservices. This was a deliberate choice given the scope of the project.
 
 ---
 
 ## Tech Stack
 
+### Backend
 | Layer | Technology |
 |---|---|
-| **Backend** | Java 17, Spring Boot 3, Spring Security, Spring Data JPA |
-| **Database** | PostgreSQL (Neon for cloud) |
-| **Auth** | Google OAuth2 (via Spring Security OAuth2 Client) |
-| **AI Integration** | Google Gemini API (via `RestTemplate` — no Spring AI dependency) |
-| **Email Fetching** | Gmail API (via Google API Client Library) |
-| **Security** | AES-256 encryption for storing user Gemini API keys |
-| **Frontend** | React 18, Vite, React Router v7, Recharts |
+| Language / Runtime | Java 17 |
+| Framework | Spring Boot 3.4.5 |
+| Security | Spring Security 6, Spring Security OAuth2 Client |
+| Persistence | Spring Data JPA (Hibernate), PostgreSQL, HikariCP |
+| Gmail Integration | Google API Client Library (`google-api-client`, `google-api-services-gmail`) |
+| AI Integration | Gemini API (`gemini-2.0-flash`) via `RestTemplate`, with per-user dynamic API key injection |
+| JSON Handling | Jackson `ObjectMapper` |
+| Encryption | AES-256-GCM (`javax.crypto`) for API key storage |
+| Utilities | Lombok, SLF4J + Logback |
+| Build Tool | Maven |
+
+### Frontend
+React 18, Vite, React Router, Recharts for charts, native `fetch` with credentialed (cookie-based) requests. Kept intentionally simple — the focus of the project is the backend data logic and API design rather than frontend.
 
 ---
 
-## User Flow
+## System Flow
 
-This section describes exactly what happens from the moment a user visits the app to the moment they log out.
+```
+Browser
+   │  1. Google OAuth2 login
+   ▼
+Spring Security OAuth2 Client ──▶ Google Auth Server
+   │  creates/updates User, issues session cookie
+   ▼
+User adds Gemini API key ──▶ encrypted (AES-256-GCM) ──▶ stored in Postgres
+   │
+   │  2. User clicks "Analyze Emails"
+   ▼
+EmailService
+   │  fetch unprocessed emails via Gmail API (incremental, by message ID)
+   │  threshold check: at least 10 new emails?
+   │      no  → return 422, frontend shows progress toward threshold
+   │      yes → continue
+   │  split emails into batches of 20
+   ▼
+GeminiService
+   │  decrypt user's API key in memory (never sent to frontend)
+   │  call Gemini per batch with a fixed JSON schema prompt
+   │  parse + validate response (structure, category, priority)
+   ▼
+Postgres
+   │  persist category, priority, summary; mark emails as processed
+   ▼
+Dashboard (charts, table, category drill-down)
+```
 
-### Step 1 — Visit the App
-The user arrives at the landing/login page. They are **not authenticated**, so the app shows the sign-in screen. No data is loaded at this point.
+## Core Backend Subsystems
 
-### Step 2 — Google Sign-In (OAuth2)
-The user clicks **"Sign in with Google"**. This redirects them to Google's OAuth2 consent screen, where they authorize the app to:
-- View their **Google account profile** (name, email, profile picture)
-- **Read** their Gmail messages and metadata
+**Incremental sync.** The backend tracks which Gmail message IDs have already been processed and only fetches new ones on each run, instead of re-pulling the whole inbox every time.
 
-> **What happens in the backend:**
-> Spring Security's OAuth2 client handles the redirect. After Google returns an authorization code, the backend exchanges it for an access token and refresh token. A new `User` record is created (or the existing one is updated) in the database with the Gmail address and OAuth tokens stored. A session (`JSESSIONID` cookie) is then issued to the browser.
+**Batching instead of per-email calls.** Emails are grouped and sent to Gemini in batches (20 per request) rather than one API call per email. This keeps the number of AI calls proportional to *batches*, not to inbox size, and avoids hitting per-minute rate limits.
 
-### Step 3 — Dashboard (First Time)
-The user lands on the **Overview** dashboard. At this point:
-- Stats are shown (total emails may be zero if first time).
-- The **"Gemini API Key"** status in the Settings card shows **"Not Set"**.
-- The **Category and Priority charts** are empty.
+**Minimum batch threshold.** Analysis only runs once there are at least 10 unprocessed emails. Below that, the endpoint returns a 422 with the current count so the frontend can show "X of 10 collected" instead of firing a near-empty, low-value AI request.
 
-The user cannot run AI analysis yet because no Gemini API key is configured.
+**Response validation.** Gemini's output is never persisted blindly. Each response is checked for valid JSON structure, and each email's assigned category and priority are checked against the fixed set of allowed values before being written to the database. Malformed or partial responses are handled without failing the whole batch.
 
-### Step 4 — Add Gemini API Key
-The user navigates to **Settings** and clicks **"Add Key"**. A modal appears where they paste their personal Gemini API key (obtained for free from [Google AI Studio](https://aistudio.google.com/app/apikey)).
+**Bring-your-own-key model.** Each user supplies their own Gemini API key rather than the app using a shared/billed key. Keys are encrypted with AES-256-GCM using a server-side secret and only decrypted in memory for the duration of an API call.
 
-> **What happens in the backend:**
-> The key is encrypted with **AES-256** using an `ENCRYPTION_SECRET` known only to the server, then stored in the `users` table. The raw key is never persisted anywhere. On every subsequent AI call, the backend decrypts the key in-memory, uses it to make the Gemini API request, and discards it immediately.
+**Multi-account support.** A user can link more than one Gmail account (e.g. personal and work/college). Each linked account keeps its own OAuth access/refresh tokens in a separate table, and emails are tagged with which source account they came from so the dashboard can distinguish them.
 
-### Step 5 — (Optional) Connect Additional Gmail Accounts
-From Settings, the user can link secondary Gmail accounts. This triggers another Google OAuth2 flow for the additional account. Connected accounts are stored in the `connected_accounts` table, each with their own access and refresh tokens.
-
-> This allows MailInsight to aggregate and analyze emails from **multiple Gmail inboxes** into one unified dashboard.
-
-### Step 6 — Analyze Emails
-The user clicks the **"Analyze Emails"** button in the top header.
-
-> **What happens in the backend (full flow):**
-> 1. The backend calls the Gmail API using the stored OAuth tokens to fetch emails that have **not yet been analyzed** (tracked by a `isNew` flag on each `Email` entity).
-> 2. It checks if there are **at least 10 new emails**. If not, it throws an `InsufficientEmailsException` and returns a `422` response.
-> 3. If the threshold is met, it bundles the emails into a structured prompt and calls the **Gemini API** (`gemini-2.0-flash`) using the user's own decrypted API key.
-> 4. Gemini returns a JSON response assigning a `category`, `priority`, and `summary` to each email.
-> 5. The backend saves these results back to the `emails` table and marks the emails as analyzed (`isNew = false`, `analyzedAt` timestamp set).
-
-> **Why 10 emails minimum?**
-> The Gemini API has per-minute token rate limits. Batching ensures users get a complete, meaningful analysis in one shot without hitting quota errors mid-way.
-
-**If < 10 new emails exist**, a modal appears on the frontend showing:
-- A progress bar (e.g., "7 / 10 emails collected")
-- A message explaining the rate-limit reasoning
-- A count of how many more emails are needed
-
-### Step 7 — View Results
-Once analysis is complete, the dashboard updates:
-
-- **Overview Page** — The donut chart populates with category percentages; the bar chart shows High/Medium/Low priority counts; summary cards update.
-- **Emails Page** — The full email table shows each email with its category badge, priority indicator, and the first line of the AI summary.
-- **Email Detail Drawer** — Clicking any row in the email table slides open a detail panel showing the full AI-generated summary, sender, received date, and category/priority badges.
-
-### Step 8 — Logout
-The user clicks **"Logout"** in the sidebar. The backend invalidates the HTTP session. The browser is redirected back to the login page and the session cookie is cleared.
+**Classification taxonomy.** Emails are classified into a fixed set of categories (grouped by domain — career opportunities, interviews, security alerts, banking, learning platforms, newsletters, promotions, campus/community updates, etc.) and one of five priority tiers, from time-sensitive/high-priority down to low-priority/promotional content. The taxonomy is fixed in the service layer rather than user-configurable, to keep classification consistent.
 
 ---
 
-## Backend Architecture
+## Database Schema
 
-```
-com.mailinsight
-├── config/          # SecurityConfig, CORS, session settings
-├── controller/      # REST controllers (Auth, Email, User, Account)
-├── dto/             # Request/Response data transfer objects
-├── entity/          # JPA entities: User, Email, ConnectedAccount
-├── enums/           # EmailCategory, EmailPriority
-├── exception/       # InsufficientEmailsException, GlobalExceptionHandler
-├── oauth2/          # Custom OAuth2 success handler
-├── repository/      # Spring Data JPA repositories
-├── service/         # GmailService, GeminiService, EmailService, UserService
-└── util/            # AES encryption utility
-```
+| Table | Purpose |
+|---|---|
+| `users` | Core user record created/updated on OAuth login |
+| `connected_accounts` | Linked Gmail accounts per user, with their own OAuth tokens |
+| `emails` | Metadata for each analyzed email (sender, subject, category, priority, summary, timestamps) |
+| Gemini key storage | Encrypted per-user API key, tied to `users` |
 
-### Key Design Decisions
-
-- **Per-user Gemini keys via `RestTemplate`:** Spring AI was intentionally avoided because it doesn't support injecting dynamic API keys per-request. Using `RestTemplate` directly gives full control over the `Authorization` header per user.
-- **AES-256 Encryption:** User Gemini keys are never stored in plaintext. The `ENCRYPTION_SECRET` env variable is the only key needed to decrypt them.
-- **Token Refresh:** Gmail OAuth tokens are refreshed automatically before each Gmail API call if they are close to expiry.
+Only email metadata is stored — sender, subject, AI-generated summary, category, priority, and timestamps. Raw email bodies and attachments are never persisted; they are read from Gmail, sent to Gemini for that single request, and discarded.
 
 ---
 
@@ -134,19 +114,42 @@ com.mailinsight
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/auth/me` | Returns the currently logged-in user (or 401) |
-| `GET` | `/api/auth/logout` | Invalidates session and logs out |
-| `GET` | `/api/emails` | Paginated list of all emails for the user |
-| `GET` | `/api/emails/new/count` | Count of unanalyzed emails |
-| `GET` | `/api/emails/stats` | Aggregate stats (totals, by category, by priority) |
-| `GET` | `/api/emails/category/{cat}` | Paginated emails filtered by category |
-| `POST` | `/api/emails/analyze` | Triggers Gmail fetch + Gemini AI analysis |
-| `GET` | `/api/user/api-key/status` | Whether the user has a Gemini API key set |
-| `POST` | `/api/user/api-key` | Save or update Gemini API key |
-| `DELETE` | `/api/user/api-key` | Remove Gemini API key |
-| `GET` | `/api/accounts` | List all connected Gmail accounts |
-| `GET` | `/api/accounts/connect` | Get Google OAuth2 URL to connect another account |
-| `DELETE` | `/api/accounts/{id}` | Disconnect a linked Gmail account |
+| GET | `/api/auth/me` | Returns the logged-in user, or 401 |
+| GET | `/api/auth/logout` | Invalidates the session |
+| GET | `/api/emails` | Paginated list of analyzed emails |
+| GET | `/api/emails/new/count` | Count of unprocessed emails |
+| GET | `/api/emails/stats` | Aggregate stats by category and priority |
+| GET | `/api/emails/category/{category}` | Paginated emails for a given category |
+| POST | `/api/emails/analyze` | Triggers the fetch + Gemini analysis pipeline |
+| GET | `/api/user/api-key/status` | Whether a Gemini key is configured |
+| POST | `/api/user/api-key` | Save or update the Gemini API key |
+| DELETE | `/api/user/api-key` | Remove the stored API key |
+| GET | `/api/accounts` | List linked Gmail accounts |
+| GET | `/api/accounts/connect` | Get the OAuth URL to link another account |
+| DELETE | `/api/accounts/{id}` | Unlink a Gmail account |
+
+---
+
+## Security
+
+- Login is Google OAuth2 only — no passwords are stored.
+- Gmail access is read-only (`gmail.readonly` scope); the app cannot send, delete, or modify emails or mailbox labels.
+- Gemini API keys are encrypted at rest (AES-256-GCM) and decrypted only in memory, only for the duration of a request.
+- Sessions are cookie-based (`JSESSIONID`), invalidated on logout.
+- Secrets (DB credentials, OAuth client secret, encryption key) are read from environment variables, never hardcoded.
+- Errors are handled through a global exception handler so internal stack traces, tokens, and API keys are never exposed in API responses.
+
+---
+
+## Scope and Limitations
+
+To keep the project focused, the following are intentionally out of scope:
+
+- No sending, replying to, deleting, or modifying emails — the app is read-only.
+- No attachment parsing — only subject, sender, and body text/snippet are used.
+- No real-time sync. Analysis is on-demand, triggered by the user.
+- No team/multi-tenant workspaces — each account is single-user.
+- No offline mode or native mobile app.
 
 ---
 
@@ -155,53 +158,41 @@ com.mailinsight
 ### Prerequisites
 - Java 17+
 - Node.js 18+
-- PostgreSQL database (local or [Neon](https://neon.tech) free tier)
-- Google Cloud project with OAuth2 credentials and Gmail API enabled
-- Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- PostgreSQL
+- A Google Cloud project with OAuth2 credentials and the Gmail API enabled
+- A Gemini API key from Google AI Studio
 
-### 1. Backend
-
+### Backend
 ```bash
 cd backend
-
-# Create application-local.properties (see Environment Variables section)
 ./mvnw spring-boot:run
 ```
+Runs on `http://localhost:8080`.
 
-The backend starts on `http://localhost:8080`.
-
-### 2. Frontend
-
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-The frontend starts on `http://localhost:5173`.
+Runs on `http://localhost:5173`.
 
 ---
 
 ## Environment Variables
 
-### Backend (`backend/src/main/resources/application.properties` or env)
-
+### Backend
 | Variable | Description |
 |---|---|
-| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL (e.g. `jdbc:postgresql://...`) |
+| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL |
 | `SPRING_DATASOURCE_USERNAME` | Database username |
 | `SPRING_DATASOURCE_PASSWORD` | Database password |
-| `GOOGLE_CLIENT_ID` | OAuth2 Client ID from Google Cloud Console |
-| `GOOGLE_CLIENT_SECRET` | OAuth2 Client Secret |
-| `ENCRYPTION_SECRET` | Random 32-char string for AES key encryption (`openssl rand -base64 32`) |
-| `FRONTEND_ORIGIN` | Allowed CORS origin (e.g. `http://localhost:5173` locally) |
+| `GOOGLE_CLIENT_ID` | OAuth2 client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth2 client secret |
+| `ENCRYPTION_SECRET` | Secret used to derive the AES-256 key for encrypting stored Gemini API keys |
+| `FRONTEND_ORIGIN` | Allowed CORS origin |
 
-### Frontend (`.env` file in `frontend/`)
-
+### Frontend
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Backend base URL (e.g. `http://localhost:8080`) |
-
----
-
-> Built with ❤️ using Spring Boot + Gemini AI
+| `VITE_API_BASE_URL` | Backend base URL |
