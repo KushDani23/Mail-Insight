@@ -1,0 +1,38 @@
+package com.mailinsight.enums;
+
+public enum EmailCategory {
+
+    // Priority 1
+    CAREER_OPPORTUNITIES,
+    APPLICATION_UPDATES,
+    INTERVIEW_INVITATIONS,
+    CODING_ASSESSMENTS,
+    BANKING_AND_PAYMENTS,
+    SECURITY_ALERTS,
+    COLLEGE_AND_ACADEMICS,
+
+    // Priority 2
+    LEARNING_PLATFORMS,
+    CERTIFICATIONS,
+    CODING_PLATFORMS,
+    HACKATHONS,
+    OPEN_SOURCE,
+
+    // Priority 3
+    BLOGS,
+    NEWSLETTERS,
+    NEWS_FEEDS,
+    VIDEO_NOTIFICATIONS,
+    WEEKLY_DIGESTS,
+    COMMUNITY_UPDATES,
+
+    // Priority 4
+    PROMOTIONS,
+    MARKETING,
+    SPAM,
+    GENERAL_UNIVERSITY,
+
+    // Priority 5
+    COMMUNITY_ACTIVITIES,
+    EVENT_INVITATIONS
+}

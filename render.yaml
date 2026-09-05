@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: mail-analyzer-backend
+    name: backend
     runtime: java
-    buildCommand: cd mail-analyzer-backend && ./mvnw clean package -DskipTests
-    startCommand: java -jar mail-analyzer-backend/target/mail-analyzer-backend-0.0.1-SNAPSHOT.jar
+    buildCommand: cd backend && ./mvnw clean package -DskipTests
+    startCommand: java -jar backend/target/mail-insight-0.0.1-SNAPSHOT.jar
     plan: free
     healthCheckPath: /api/auth/me
     envVars:
