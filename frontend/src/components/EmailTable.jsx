@@ -6,14 +6,30 @@ import styles from './EmailTable.module.css';
 
 /* ── Helpers ───────────────────────────────────────── */
 const CATEGORY_COLORS = {
-  WORK:        { bg: 'rgba(124,92,252,0.15)', color: '#9B7FFF', border: 'rgba(124,92,252,0.3)' },
-  PERSONAL:    { bg: 'rgba(79,195,247,0.12)', color: '#4FC3F7', border: 'rgba(79,195,247,0.3)' },
-  FINANCE:     { bg: 'rgba(74,222,128,0.12)', color: '#4ADE80', border: 'rgba(74,222,128,0.3)' },
-  PROMOTIONS:  { bg: 'rgba(250,204,21,0.12)', color: '#FACC15', border: 'rgba(250,204,21,0.3)' },
-  SOCIAL:      { bg: 'rgba(247,200,79,0.12)', color: '#F7C84F', border: 'rgba(247,200,79,0.3)' },
-  SPAM:        { bg: 'rgba(255,92,122,0.12)', color: '#FF5C7A', border: 'rgba(255,92,122,0.3)' },
-  UPDATES:     { bg: 'rgba(99,102,241,0.12)', color: '#818CF8', border: 'rgba(99,102,241,0.3)' },
-  OTHER:       { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' },
+  CAREER_OPPORTUNITIES:  { bg: 'rgba(124,92,252,0.15)', color: '#9B7FFF', border: 'rgba(124,92,252,0.3)' },
+  APPLICATION_UPDATES:   { bg: 'rgba(79,195,247,0.12)', color: '#4FC3F7', border: 'rgba(79,195,247,0.3)' },
+  INTERVIEW_INVITATIONS: { bg: 'rgba(74,222,128,0.12)', color: '#4ADE80', border: 'rgba(74,222,128,0.3)' },
+  CODING_ASSESSMENTS:    { bg: 'rgba(250,204,21,0.12)', color: '#FACC15', border: 'rgba(250,204,21,0.3)' },
+  BANKING_AND_PAYMENTS:  { bg: 'rgba(74,222,128,0.12)', color: '#4ADE80', border: 'rgba(74,222,128,0.3)' },
+  SECURITY_ALERTS:       { bg: 'rgba(255,92,122,0.12)', color: '#FF5C7A', border: 'rgba(255,92,122,0.3)' },
+  COLLEGE_AND_ACADEMICS: { bg: 'rgba(124,92,252,0.15)', color: '#9B7FFF', border: 'rgba(124,92,252,0.3)' },
+  LEARNING_PLATFORMS:    { bg: 'rgba(79,195,247,0.12)', color: '#4FC3F7', border: 'rgba(79,195,247,0.3)' },
+  CERTIFICATIONS:        { bg: 'rgba(247,200,79,0.12)', color: '#F7C84F', border: 'rgba(247,200,79,0.3)' },
+  CODING_PLATFORMS:      { bg: 'rgba(99,102,241,0.12)', color: '#818CF8', border: 'rgba(99,102,241,0.3)' },
+  HACKATHONS:            { bg: 'rgba(250,204,21,0.12)', color: '#FACC15', border: 'rgba(250,204,21,0.3)' },
+  OPEN_SOURCE:           { bg: 'rgba(74,222,128,0.12)', color: '#4ADE80', border: 'rgba(74,222,128,0.3)' },
+  BLOGS:                 { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' },
+  NEWSLETTERS:           { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' },
+  NEWS_FEEDS:            { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' },
+  VIDEO_NOTIFICATIONS:   { bg: 'rgba(255,92,122,0.12)', color: '#FF5C7A', border: 'rgba(255,92,122,0.3)' },
+  WEEKLY_DIGESTS:        { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' },
+  COMMUNITY_UPDATES:     { bg: 'rgba(79,195,247,0.12)', color: '#4FC3F7', border: 'rgba(79,195,247,0.3)' },
+  PROMOTIONS:            { bg: 'rgba(250,204,21,0.12)', color: '#FACC15', border: 'rgba(250,204,21,0.3)' },
+  MARKETING:             { bg: 'rgba(250,204,21,0.12)', color: '#FACC15', border: 'rgba(250,204,21,0.3)' },
+  SPAM:                  { bg: 'rgba(255,92,122,0.12)', color: '#FF5C7A', border: 'rgba(255,92,122,0.3)' },
+  GENERAL_UNIVERSITY:    { bg: 'rgba(124,92,252,0.15)', color: '#9B7FFF', border: 'rgba(124,92,252,0.3)' },
+  COMMUNITY_ACTIVITIES:  { bg: 'rgba(247,200,79,0.12)', color: '#F7C84F', border: 'rgba(247,200,79,0.3)' },
+  EVENT_INVITATIONS:     { bg: 'rgba(99,102,241,0.12)', color: '#818CF8', border: 'rgba(99,102,241,0.3)' },
 };
 
 const PRIORITY_CONFIG = {
@@ -40,13 +56,16 @@ function formatDate(iso) {
 }
 
 function CategoryBadge({ category }) {
-  const c = CATEGORY_COLORS[category?.toUpperCase?.()] ?? CATEGORY_COLORS.OTHER;
+  const c = CATEGORY_COLORS[category?.toUpperCase?.()] ?? { bg: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: 'rgba(148,163,184,0.2)' };
+  const label = category
+    ? category.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    : 'Other';
   return (
     <span
       className={styles.categoryBadge}
       style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}
     >
-      {category ?? 'Other'}
+      {label}
     </span>
   );
 }
@@ -75,7 +94,7 @@ function SkeletonRow() {
 }
 
 /* ── Main Component ────────────────────────────────── */
-export default function EmailTable({ refreshKey }) {
+export default function EmailTable({ refreshKey, onSelectEmail }) {
   const toast = useToast();
   const [emails, setEmails]     = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -121,7 +140,17 @@ export default function EmailTable({ refreshKey }) {
       )
     : emails;
 
-  const CATEGORIES = ['WORK', 'PERSONAL', 'FINANCE', 'PROMOTIONS', 'SOCIAL', 'UPDATES', 'SPAM', 'OTHER'];
+  const CATEGORIES = [
+    'CAREER_OPPORTUNITIES', 'APPLICATION_UPDATES', 'INTERVIEW_INVITATIONS',
+    'CODING_ASSESSMENTS', 'BANKING_AND_PAYMENTS', 'SECURITY_ALERTS', 'COLLEGE_AND_ACADEMICS',
+    'LEARNING_PLATFORMS', 'CERTIFICATIONS', 'CODING_PLATFORMS', 'HACKATHONS', 'OPEN_SOURCE',
+    'BLOGS', 'NEWSLETTERS', 'NEWS_FEEDS', 'VIDEO_NOTIFICATIONS', 'WEEKLY_DIGESTS', 'COMMUNITY_UPDATES',
+    'PROMOTIONS', 'MARKETING', 'SPAM', 'GENERAL_UNIVERSITY',
+    'COMMUNITY_ACTIVITIES', 'EVENT_INVITATIONS',
+  ];
+
+  // Format category name: CAREER_OPPORTUNITIES → Career Opportunities
+  const formatCat = (c) => c.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 
   return (
     <div className={styles.wrapper}>
@@ -154,7 +183,7 @@ export default function EmailTable({ refreshKey }) {
           >
             <option value="">All Categories</option>
             {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>
+              <option key={c} value={c}>{formatCat(c)}</option>
             ))}
           </select>
         </div>
@@ -204,7 +233,7 @@ export default function EmailTable({ refreshKey }) {
                 </tr>
               )
               : displayed.map((email) => (
-                <tr key={email.id} className={styles.row}>
+                <tr key={email.id} className={styles.row} onClick={() => onSelectEmail?.(email)}>
                   <td><PriorityDot priority={email.priority} /></td>
                   <td>
                     <span className={styles.sender} title={email.sender}>

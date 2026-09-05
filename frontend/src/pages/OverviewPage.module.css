@@ -49,8 +49,14 @@
   font-weight: 500;
 }
 
-/* ── Breakdown card ───────────────────────────────── */
-.breakdownCard {
+/* ── Charts Row ───────────────────────────────────── */
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.chartCard {
   padding: 24px;
 }
 
@@ -59,60 +65,65 @@
   font-weight: 700;
   color: var(--text-primary);
   font-family: var(--font-display);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-.categories { display: flex; flex-direction: column; gap: 14px; }
+/* ── Priority Summary Cards ───────────────────────── */
+.priorityCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
 
-.catRow { display: flex; flex-direction: column; gap: 6px; }
+.prioCard {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform var(--transition-base);
+}
 
-.catMeta {
+.prioCard:hover { transform: translateY(-2px); }
+
+.prioHeader {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.catDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.prioEmoji { font-size: 1.1rem; }
 
-.catName {
+.prioLabel {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--text-primary);
-  flex: 1;
-}
-
-.catCount {
-  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
-.catPct {
+.prioCount {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  min-width: 38px;
-  text-align: right;
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1;
 }
 
-.catTrack {
-  height: 6px;
+.prioTrack {
+  height: 5px;
   background: rgba(255,255,255,0.05);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
 
-.catFill {
+.prioFill {
   height: 100%;
   border-radius: var(--radius-full);
-  transition: width 0.8s var(--transition-spring);
+  transition: width 1s var(--transition-spring);
   opacity: 0.85;
+}
+
+.prioPct {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 /* ── New emails card ──────────────────────────────── */
@@ -149,4 +160,19 @@
   background: linear-gradient(90deg, #4FC3F7, #7C5CFC);
   border-radius: var(--radius-full);
   transition: width 0.8s var(--transition-spring);
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 900px) {
+  .chartsRow { grid-template-columns: 1fr; }
+  .priorityCards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .wrapper { padding: 20px 16px; }
+  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .statsGrid { grid-template-columns: 1fr; }
 }

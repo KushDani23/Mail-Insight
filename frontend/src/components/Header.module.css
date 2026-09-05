@@ -38,3 +38,8 @@
   font-size: 0.88rem !important;
   padding: 9px 18px !important;
 }
+
+@media (max-width: 768px) {
+  .header { padding: 16px; }
+  .title  { font-size: 1.15rem; }
+}

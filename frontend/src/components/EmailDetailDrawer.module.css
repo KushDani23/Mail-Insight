@@ -1,0 +1,219 @@
+/* ══════════════════════════════════════════════════
+   EmailDetailDrawer.module.css
+   ══════════════════════════════════════════════════ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: var(--blur-sm);
+  z-index: 900;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.15s ease;
+}
+
+.drawer {
+  width: 100%;
+  max-width: 460px;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-left: 1px solid rgba(124, 92, 252, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: slideInRight 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── Header ───────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.drawerTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.closeBtn {
+  background: var(--bg-glass);
+  border: var(--border-glass);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.closeBtn:hover { color: var(--text-primary); background: var(--bg-glass-hover); }
+
+/* ── Subject ──────────────────────────────────────── */
+.subjectBlock {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subject {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catBadge,
+.prioBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Meta ─────────────────────────────────────────── */
+.metaGrid {
+  padding: 16px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.metaIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.metaLabel {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.metaValue {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+/* ── Summary ──────────────────────────────────────── */
+.summarySection {
+  padding: 20px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.summaryText {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  background: rgba(124, 92, 252, 0.04);
+  border: 1px solid rgba(124, 92, 252, 0.1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.noSummary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  background: rgba(255,255,255,0.02);
+  border: var(--border-glass);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.noSummary p {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.noSummary span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── Footer ───────────────────────────────────────── */
+.footer {
+  padding: 14px 24px;
+  border-top: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.footerItem {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.footerItem code {
+  font-family: monospace;
+  background: rgba(255,255,255,0.04);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 480px) {
+  .drawer { max-width: 100%; }
+  .metaGrid { grid-template-columns: 1fr; }
+}

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Mail, Layers, Star, Wifi } from 'lucide-react';
 import { emailsApi } from '../api/emails';
 import { userApi } from '../api/user';
+import CategoryDonutChart from '../components/charts/CategoryDonutChart';
+import PriorityBarChart   from '../components/charts/PriorityBarChart';
 import styles from './OverviewPage.module.css';
 
 function StatCard({ icon: Icon, label, value, color, loading }) {
@@ -40,23 +42,9 @@ export default function OverviewPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const topCategories = stats?.countByCategory
-    ? Object.entries(stats.countByCategory)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-    : [];
-
-  const totalForPct = topCategories.reduce((s, [, v]) => s + v, 0) || 1;
-
-  const CAT_COLORS = {
-    WORK: '#9B7FFF', PERSONAL: '#4FC3F7', FINANCE: '#4ADE80',
-    PROMOTIONS: '#FACC15', SOCIAL: '#F7C84F', SPAM: '#FF5C7A',
-    UPDATES: '#818CF8', OTHER: '#94A3B8',
-  };
-
   return (
     <div className={styles.wrapper}>
-      {/* Stat cards */}
+      {/* ── Stat Cards ── */}
       <div className={styles.statsGrid}>
         <StatCard icon={Mail}   label="Total Emails"      value={stats?.totalEmails?.toLocaleString() ?? '—'} color="#9B7FFF" loading={loading} />
         <StatCard icon={Layers} label="New (Unanalyzed)"  value={newCount?.count?.toLocaleString() ?? '—'}    color="#4FC3F7" loading={loading} />
@@ -68,41 +56,56 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Category breakdown */}
-      <div className={`glass-card ${styles.breakdownCard}`}>
-        <h3 className={styles.cardTitle}>Category Breakdown</h3>
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 36, borderRadius: 8 }} />)}
-          </div>
-        ) : topCategories.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 12 }}>
-            No data yet — run an AI analysis first.
-          </p>
-        ) : (
-          <div className={styles.categories}>
-            {topCategories.map(([cat, count]) => {
-              const color = CAT_COLORS[cat] ?? '#94A3B8';
-              const pct   = ((count / totalForPct) * 100).toFixed(1);
-              return (
-                <div key={cat} className={styles.catRow}>
-                  <div className={styles.catMeta}>
-                    <span className={styles.catDot} style={{ background: color }} />
-                    <span className={styles.catName}>{cat.charAt(0) + cat.slice(1).toLowerCase()}</span>
-                    <span className={styles.catCount}>{count.toLocaleString()}</span>
-                    <span className={styles.catPct}>{pct}%</span>
-                  </div>
-                  <div className={styles.catTrack}>
-                    <div className={styles.catFill} style={{ width: `${pct}%`, background: color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* ── Charts Row ── */}
+      <div className={styles.chartsRow}>
+        <div className={`glass-card ${styles.chartCard}`}>
+          <h3 className={styles.cardTitle}>Category Breakdown</h3>
+          {loading ? (
+            <div className="skeleton" style={{ height: 260, borderRadius: 12 }} />
+          ) : (
+            <CategoryDonutChart countByCategory={stats?.countByCategory} />
+          )}
+        </div>
+
+        <div className={`glass-card ${styles.chartCard}`}>
+          <h3 className={styles.cardTitle}>Priority Distribution</h3>
+          {loading ? (
+            <div className="skeleton" style={{ height: 260, borderRadius: 12 }} />
+          ) : (
+            <PriorityBarChart countByPriority={stats?.countByPriority} />
+          )}
+        </div>
       </div>
 
-      {/* New emails indicator */}
+      {/* ── Priority Summary Cards ── */}
+      {!loading && stats?.countByPriority && (
+        <div className={styles.priorityCards}>
+          {[
+            { key: 'HIGH',   label: 'High Priority',   color: '#FF5C7A', emoji: '🔴' },
+            { key: 'MEDIUM', label: 'Medium Priority',  color: '#FACC15', emoji: '🟡' },
+            { key: 'LOW',    label: 'Low Priority',     color: '#4ADE80', emoji: '🟢' },
+          ].map(({ key, label, color, emoji }) => {
+            const count = stats.countByPriority[key] ?? 0;
+            const total = stats.totalEmails || 1;
+            const pct   = ((count / total) * 100).toFixed(1);
+            return (
+              <div key={key} className={`glass-card ${styles.prioCard}`}>
+                <div className={styles.prioHeader}>
+                  <span className={styles.prioEmoji}>{emoji}</span>
+                  <span className={styles.prioLabel}>{label}</span>
+                </div>
+                <p className={styles.prioCount} style={{ color }}>{count.toLocaleString()}</p>
+                <div className={styles.prioTrack}>
+                  <div className={styles.prioFill} style={{ width: `${pct}%`, background: color }} />
+                </div>
+                <p className={styles.prioPct}>{pct}% of total</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── New Emails Indicator ── */}
       {newCount !== null && (
         <div className={`glass-card ${styles.newEmailsCard}`}>
           <div className={styles.newEmailsIcon}>📬</div>

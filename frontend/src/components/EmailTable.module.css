@@ -134,7 +134,7 @@
 .row {
   border-bottom: 1px solid rgba(255,255,255,0.03);
   transition: background var(--transition-fast);
-  cursor: default;
+  cursor: pointer;
 }
 
 .row:hover { background: rgba(255,255,255,0.025); }
